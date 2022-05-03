@@ -5,12 +5,14 @@ import os
 
 
 if __name__ == '__main__':
-    # Set up parser. TODO: Add batch size, learning rate, etc.
+    # Set up parser.
     parser = argparse.ArgumentParser(
         description='Train on default model/feature extraction config.'
         )
     parser.add_argument('--data_dir', type=str, help='Path to processed data.')
     parser.add_argument('--test_split', type=float, help='Ratio of test split (0<=x<=1.)')
+    parser.add_argument('--batch_size', type=int, default=16, help='Set batch size (optional.) Deafult set to 16.')
+    parser.add_argument('--lr', type=float, default=2e-4, help='Set learning rate of model (optional.) Default set to 2e-4.')
 
     args = parser.parse_args()
     
@@ -30,13 +32,13 @@ if __name__ == '__main__':
     # Set training arguments
     training_args = TrainingArguments(
     output_dir=os.path.join('training_results', args.data_dir),
-    per_device_train_batch_size=16,
+    per_device_train_batch_size=args.batch_size,
     evaluation_strategy="steps",
     num_train_epochs=4,
     save_steps=100,
     eval_steps=100,
     logging_steps=10,
-    learning_rate=2e-4,
+    learning_rate=args.lr,
     save_total_limit=2,
     remove_unused_columns=False,
     push_to_hub=False,

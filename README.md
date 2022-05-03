@@ -38,7 +38,6 @@ Make sure that the `data_dir` parameter from both `data_handle` and `trainer` CL
 # To Do:
 
 Low Hanging Fruit:
-- [ ] Add more parameters to trainer (batch size, num epochs, etc.)
 - [ ] Add nice cover image to repo
 - [ ] Add evaluation script
    - [ ] Load model
