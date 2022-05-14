@@ -87,11 +87,11 @@ Make sure that the `data_dir` parameter from both `data_handle` and `trainer` CL
 
 Low Hanging Fruit:
 - [ ] Add nice cover image to repo
-- [ ] Add evaluation script
-   - [x] Add train/test/validation + saving validation set mechanism
-   - [ ] Load model
-   - [ ] Run on validation set
-   - [ ] Get confusion matrix
+- [x] Add train/test/validation + saving validation set mechanism
+- [x] Load model
+- [x] Run on validation set
+- [x] Get confusion matrix
+- [ ] Wrap functions into eval script
 
 Bigger Stuff:
 - [ ] Head wise visualizations
