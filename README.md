@@ -1,13 +1,15 @@
-# Applications of Vision Transformers for Exotic Lattice Models 
+# Applications of Vision Transformers for Exotic Lattice Models
 
 ## About
+
 Applications of Vision Transformers to Exotic Lattice Models. This repository contains all of the finetuned models as well as core scripts to reproduce results and experiment on new data. The experimentation suite that this repository builds on top of can be found [in this website](https://www.statmechsims.com/). The goal of this repository is to provide an end-to-end experimentation and evaulation of Vision Transfomers on these types of systems.
 
-Raising issues are encouraged so we know what features to prioritize. We want to inevitably work towards predicting regions of interest using masked patch prediction, so this is our top most priority on our road map. 
+Raising issues are encouraged so we know what features to prioritize. We want to inevitably work towards predicting regions of interest using masked patch prediction, so this is our top most priority on our road map.
 
-# Documentation:
+## Documentation
 
-## Format Data from JSON to User Friendly images.
+### Format Data from JSON to User Friendly images
+
 To process the data, ensure you have a `data.json` from [statmechsims](https://www.statmechsims.com/). This json will contain all of your simulation data.
 
 The result of the above will lead to a new directory named `af_ising` with the following structure:
@@ -18,7 +20,7 @@ python3 data_handle.py --json_path="/path/to/data.json" --n_bins=4 --data_dir"af
 
 Binning is set by the temperature value, all of equal length between the minimum and maximum temperature.
 
-**NOTE: USE THE CLI IF YOU WANT TO USE EQUIDISTANT TEMPERATURE BOUNDARIES** 
+### NOTE: USE THE CLI IF YOU WANT TO USE EQUIDISTANT TEMPERATURE BOUNDARIES. ALSO, PLEASE MAKE SURE THE DIRECTORY (`af_ising` IN THIS EXAMPLE) DOES NOT EXIST. IF THE DIRECTORY EXISTS, IT WILL BE REMOVED AND REMADE
 
 **If you would like to add custom intervals, simply run the following in a Jupyter notebook or Python script:**
 
@@ -45,6 +47,7 @@ processor = DataProcessor(json_path, data_dir, custom_intervals=custom_intervals
 # Let the processor process!
 processor.process()
 ```
+
 Should you decide to use custom intervals, please ensure the min/max temperatures (0 and 4, in this example) line up with your simulation experiments.
 
 The result of either the following CLI call or running in a notebook/script will lead to a directory with the following structure.
@@ -56,6 +59,7 @@ af_ising/
 ├── bin2/
 └── bin3/ 
 ```
+
 The only difference between these is the boundaries that determine which image goes into which bin.
 
 ## Training the Model
@@ -74,18 +78,20 @@ af_ising/
 ├── bin1/
 ├── bin2/
 ├── bin3/
-├── training_results0/
-└── validation0.csv
-
+├── training_results/
+│   └── training_results0
+└── validation/
+    └── validation0.csv
 ```
 
 The necessary parameters you ***must*** input are `data_dir` and `test_split`. The last 3 parameters (`num_runs`, `batch_size`, and `lr`) are optional. The default values for those are `1`, `16`, and `2e-4`, respectively.
 
 Make sure that the `data_dir` parameter from both `data_handle` and `trainer` CLI calls are the same and there should be no issue. Furthermore, I highly recommend you increase the `num_runs` to at least 5 to have a solid evaluation confidence interval.
 
-# To Do:
+## To Do
 
 Low Hanging Fruit:
+
 - [ ] Add nice cover image to repo
 - [x] Add train/test/validation + saving validation set mechanism
 - [x] Load model
@@ -94,5 +100,6 @@ Low Hanging Fruit:
 - [ ] Wrap functions into eval script
 
 Bigger Stuff:
+
 - [ ] Head wise visualizations
 - [ ] Add masker to images

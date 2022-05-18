@@ -123,11 +123,13 @@ class DataProcessor:
         Check if data directory exists. If it does, remove the directory tree and create a new one for bins to be inside. If it does not exist,
         create it and bins.
         '''
-        if os.path.isdir(self.data_dir): # Check if it exists and remove it entirely.
+        # Check if it exists and remove it entirely.
+        if os.path.isdir(self.data_dir): 
             shutil.rmtree(self.data_dir)
         os.mkdir(self.data_dir)
+        # Create new bins:
         for bin in range(self.n_bins):
-            os.mkdir(f'{self.data_dir}/bin{bin}')
+            os.mkdir(f'{self.data_dir}/data/bin{bin}')
     
     def _colormap(self, array_:np.ndarray):
         '''

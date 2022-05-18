@@ -25,8 +25,8 @@ if __name__ == '__main__':
         dataset = load_as_dataset(args.data_dir, args.test_split)
 
         # Save validation set:
-        # Will be validation{i}.csv (validation0.csv, validation1.csv, etc.)
-        dataset['validation'].to_csv(os.path.join(args.data_dir, f'validation{i}.csv'), index=None) # Drop index column
+        # Will be validation/validation{i}.csv (validation0.csv, validation1.csv, etc.)
+        dataset['validation'].to_csv(os.path.join(args.data_dir, 'validation', f'validation{i}.csv'), index=None) # Drop index column
 
         # Parse out number of classes:
         labels = dataset['train'].features['label'].names
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
         # Set training arguments
         training_args = TrainingArguments(
-        output_dir=os.path.join(args.data_dir, f'training_results{i}'),
+        output_dir=os.path.join(args.data_dir, 'training_results', f'training_results{i}'),
         per_device_train_batch_size=args.batch_size,
         evaluation_strategy="steps",
         num_train_epochs=4,
