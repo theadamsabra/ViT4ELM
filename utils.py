@@ -2,10 +2,17 @@
 import torch
 import numpy as np
 import pandas as pd
+import os
 from transformers import ViTForImageClassification, ViTFeatureExtractor, Trainer, TrainingArguments
 from datasets import load_metric, load_dataset, Dataset, DatasetDict, Image
 
 ## DATASET RELATED UTILS
+
+def check_for_dir(data_dir:str, dir_name:str):
+    dir_path = os.path.join(data_dir, dir_name)
+    if not os.path.isdir(dir_path):
+        os.mkdir(dir_path)
+    return dir_path
 
 def load_as_dataset(data_dir:str, test_size:float) -> DatasetDict:
     '''

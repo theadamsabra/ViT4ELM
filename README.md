@@ -54,10 +54,11 @@ The result of either the following CLI call or running in a notebook/script will
 
 ```console
 af_ising/
-├── bin0/ 
-├── bin1/
-├── bin2/
-└── bin3/ 
+└── data/
+    ├──  bin0/ 
+    ├── bin1/
+    ├── bin2/
+    └── bin3/ 
 ```
 
 The only difference between these is the boundaries that determine which image goes into which bin.
@@ -74,10 +75,11 @@ The results of the following run will be in your `data_dir`:
 
 ```console
 af_ising/
-├── bin0/ 
-├── bin1/
-├── bin2/
-├── bin3/
+└── data/
+    ├──  bin0/ 
+    ├── bin1/
+    ├── bin2/
+    └── bin3/ 
 ├── training_results/
 │   └── training_results0
 └── validation/
@@ -88,16 +90,27 @@ The necessary parameters you ***must*** input are `data_dir` and `test_split`. T
 
 Make sure that the `data_dir` parameter from both `data_handle` and `trainer` CLI calls are the same and there should be no issue. Furthermore, I highly recommend you increase the `num_runs` to at least 5 to have a solid evaluation confidence interval.
 
+## Evaluation
+
+To run evaluation, you can simply run the following command.
+
+```console
+python3 eval.py --data_dir="af_ising" --validation_num=0 --checkpoint_num=100 --num_labels=4
+```
+
+There are some notes that you should keep in mind, particularly around design choices of the CLI call.
+
+First and foremost, you will need to specify which validation set you will want to run. Assuming you are following this example down to the letter, you will only have one run (as specified in the `trainer`.) Second, you will have any number of checkpoints to choose from, which is why there is the flexibility to choose the number. Third, you will need to specify the number of labels as the model will need to be reloaded. In order to reload the model, the number of labels *will* need to be specified.
+
 ## To Do
 
-Low Hanging Fruit:
+Smaller Stuff:
 
-- [ ] Add nice cover image to repo
-- [x] Add train/test/validation + saving validation set mechanism
-- [x] Load model
-- [x] Run on validation set
-- [x] Get confusion matrix
-- [ ] Wrap functions into eval script
+- [ ] Stratified sampling / class
+- [ ] Better model loading
+- [ ] `eval` as bool param in trainer. If true, run evaluation in training.
+- [ ] Save confusion matrix as image from matplotlib
+- [ ] Add cover image for repo
 
 Bigger Stuff:
 

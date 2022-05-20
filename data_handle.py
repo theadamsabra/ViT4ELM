@@ -60,7 +60,7 @@ class DataProcessor:
     Handling class to process saved simulations from https://www.statmechsims.com/models/metropolis to
     friendly format.
     '''
-    def __init__(self, json_path:str, data_dir='data', n_bins:int=None, custom_intervals:np.ndarray=None) -> None:
+    def __init__(self, json_path:str, data_dir:str, n_bins:int=None, custom_intervals:np.ndarray=None) -> None:
         '''
         params:
             - json_path (str): Path to JSON of saved simulation.
@@ -100,7 +100,7 @@ class DataProcessor:
         
         # If intervals are not instantiated and number of bins are instantiated:
         elif self.binner.intervals is None and self.n_bins != None:
-            # Calculate equidistant range for each bin. 
+            # Calculate equidistant range for each bin.
             self.bin_len = (self.parser.temp_max - self.parser.temp_min) / self.n_bins
             
             # Instantiate binner properly:
@@ -123,13 +123,14 @@ class DataProcessor:
         Check if data directory exists. If it does, remove the directory tree and create a new one for bins to be inside. If it does not exist,
         create it and bins.
         '''
-        # Check if it exists and remove it entirely.
-        if os.path.isdir(self.data_dir): 
-            shutil.rmtree(self.data_dir)
-        os.mkdir(self.data_dir)
+        # Check if data directory within experiment exists and remove it entirely.
+        data_dir_subdirectory = os.path.join(self.data_dir, 'data')
+        if os.path.isdir(data_dir_subdirectory): 
+            shutil.rmtree(data_dir_subdirectory)
+        os.mkdir(data_dir_subdirectory)
         # Create new bins:
         for bin in range(self.n_bins):
-            os.mkdir(f'{self.data_dir}/data/bin{bin}')
+            os.mkdir(os.path.join(data_dir_subdirectory, f'bin{bin}'))
     
     def _colormap(self, array_:np.ndarray):
         '''
@@ -152,16 +153,19 @@ class DataProcessor:
         # Will add a new key called bin_number when specified bin is created.
         # After this loop, a csv will be created:
         for data_info in self.parser.data:
+            # Parse out temp
             temp = data_info['temp']
-            for bin_number in range(self.n_bins):
-                if self.binner.intervals[bin_number, 0] <= temp <= self.binner.intervals[bin_number, 1]:
-                    data_info['bin_number'] = bin_number
             # Save data array as image to data/bin_number:
             array_ = np.array([float(x)for x in data_info['spinArray'].split(',')]).reshape(100,100)
             # Some handling is done to convert to color mapping:
             img = self._colormap(array_)
-            save_path = f'{self.data_dir}/bin{data_info["bin_number"]}/{data_info["timestamp"]}.jpg'
-            # Save numpy array
+            # Loop to through bins to find bin number:
+            for bin_number in range(self.n_bins):
+                if self.binner.intervals[bin_number, 0] <= temp <= self.binner.intervals[bin_number, 1]:
+                    data_info['bin_number'] = bin_number
+            # Construct save path
+            save_path = os.path.join(self.data_dir, 'data', f'bin{data_info["bin_number"]}', f'{data_info["timestamp"]}.jpg')
+            # Save array as JPEG
             img.save(save_path)
 
 if __name__ == '__main__':
@@ -173,7 +177,10 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, help='Path to save binned data. Best it is your simulation name.')
     parser.add_argument('--n_bins', type=int, help='Number of bins to bin across start/end temperature.')
     args = parser.parse_args()
-
     # Instantiate processor and run it.
-    processor = DataProcessor(args.json_path, args.n_bins, args.data_dir)
+    processor = DataProcessor(
+        json_path = args.json_path, 
+        data_dir = args.data_dir, 
+        n_bins = args.n_bins
+        )
     processor.process()

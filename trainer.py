@@ -26,7 +26,8 @@ if __name__ == '__main__':
 
         # Save validation set:
         # Will be validation/validation{i}.csv (validation0.csv, validation1.csv, etc.)
-        dataset['validation'].to_csv(os.path.join(args.data_dir, 'validation', f'validation{i}.csv'), index=None) # Drop index column
+        validation_dir = check_for_dir(args.data_dir, 'validation')
+        dataset['validation'].to_csv(os.path.join(validation_dir, f'validation{i}.csv'), index=None) # Drop index column
 
         # Parse out number of classes:
         labels = dataset['train'].features['label'].names
@@ -38,9 +39,11 @@ if __name__ == '__main__':
         # Load model
         model = load_pretrained_vit_model(num_labels)
 
+        # Check for training results path:
+        training_results_path = check_for_dir(args.data_dir, 'training_results')
         # Set training arguments
         training_args = TrainingArguments(
-        output_dir=os.path.join(args.data_dir, 'training_results', f'training_results{i}'),
+        output_dir=os.path.join(training_results_path, f'training_results{i}'),
         per_device_train_batch_size=args.batch_size,
         evaluation_strategy="steps",
         num_train_epochs=4,
