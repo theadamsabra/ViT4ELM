@@ -10,9 +10,14 @@ Raising issues are encouraged so we know what features to prioritize. We want to
 
 ### Format Data from JSON to User Friendly images
 
-To process the data, ensure you have a `data.json` from [statmechsims](https://www.statmechsims.com/). This json will contain all of your simulation data.
+To process the data, ensure you have a `data.json` from [statmechsims](https://www.statmechsims.com/). This json will contain all of your simulation data. Say you have the following directory:
 
-The result of the above will lead to a new directory named `af_ising` with the following structure:
+```console
+af_ising/
+└── data.json
+```
+
+Running the below command will lead to a new directory named `af_ising` with the following structure:
 
 ```console
 python3 data_handle.py --json_path="/path/to/data.json" --n_bins=4 --data_dir"af_ising"
@@ -54,62 +59,63 @@ The result of either the following CLI call or running in a notebook/script will
 
 ```console
 af_ising/
-└── data/
-    ├──  bin0/ 
-    ├── bin1/
-    ├── bin2/
-    └── bin3/ 
+├── csvs
+│   ├── data.csv
+│   ├── test.csv
+│   ├── train.csv
+│   └── validation.csv
+├── data
+│   ├── bin0
+│   ├── bin1
+│   ├── bin2
+│   └── bin3
+├── data.json
+└── experiments.json
 ```
 
-The only difference between these is the boundaries that determine which image goes into which bin.
+The only difference between these is the boundaries that determine which image goes into which bin based off of the temperature. Again, this is assuming you want to bin into 4 bins.
 
 ## Training the Model
 
 To train on the pretrained ViT Base 32 model with default configurations for feature extraction, run the following command.
 
 ```console
-python3 trainer.py --data_dir="af_ising" --test_split=0.4 --num_runs=1 --batch_size=16 --lr=2e-4
+python3 trainer.py --data_dir="af_ising" --num_runs=1 --batch_size=16 --lr=2e-4 --eval=True
 ```
+
+The necessary parameters you ***must*** input is `data_dir`. 
+
+The last 4 parameters (`num_runs`, `batch_size`, `lr`, `eval`) are optional. The default values for those are `1`, `16`, `2e-4`, and `True` respectively. Make sure that the `data_dir` parameter from both `data_handle` and `trainer` CLI calls are the same and there should be no issue. Furthermore, I highly recommend you increase the `num_runs` to at least 5 to construct solid evaluation. The instantiated ViT weights are randomized after all.
+
+Evaluation will take place on a per run basis. There currently does not exist a seperate script that does evaluation independently, so keep `eval` to be `True` until it is allowed seperately. During evaluation, a confusion matrix will be saved as a numpy array. Furthermore, `pyplot` will display the confusion matrix. So, if you want to save the image, you can.
 
 The results of the following run will be in your `data_dir`:
 
 ```console
-af_ising/
-└── data/
-    ├──  bin0/ 
-    ├── bin1/
-    ├── bin2/
-    └── bin3/ 
-├── training_results/
-│   └── training_results0
-└── validation/
-    └── validation0.csv
+datasets/af_ising
+├── csvs
+│   ├── data.csv
+│   ├── test.csv
+│   ├── train.csv
+│   └── validation.csv
+├── data
+│   ├── bin0
+│   ├── bin1
+│   ├── bin2
+│   └── bin3
+├── data.json
+├── experiments.json
+├── models
+│   └── model_run_0
+└── training_results
+    └── training_results0
 ```
-
-The necessary parameters you ***must*** input are `data_dir` and `test_split`. The last 3 parameters (`num_runs`, `batch_size`, and `lr`) are optional. The default values for those are `1`, `16`, and `2e-4`, respectively.
-
-Make sure that the `data_dir` parameter from both `data_handle` and `trainer` CLI calls are the same and there should be no issue. Furthermore, I highly recommend you increase the `num_runs` to at least 5 to have a solid evaluation confidence interval.
-
-## Evaluation
-
-To run evaluation, you can simply run the following command.
-
-```console
-python3 eval.py --data_dir="af_ising" --validation_num=0 --checkpoint_num=100 --num_labels=4
-```
-
-There are some notes that you should keep in mind, particularly around design choices of the CLI call.
-
-First and foremost, you will need to specify which validation set you will want to run. Assuming you are following this example down to the letter, you will only have one run (as specified in the `trainer`.) Second, you will have any number of checkpoints to choose from, which is why there is the flexibility to choose the number. Third, you will need to specify the number of labels as the model will need to be reloaded. In order to reload the model, the number of labels *will* need to be specified.
 
 ## To Do
 
 Smaller Stuff:
 
-- [ ] Stratified sampling / class
 - [ ] Better model loading
-- [ ] `eval` as bool param in trainer. If true, run evaluation in training.
-- [ ] Save confusion matrix as image from matplotlib
 - [ ] Add cover image for repo
 
 Bigger Stuff:

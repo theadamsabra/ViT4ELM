@@ -5,10 +5,12 @@ Used exclusively data preprocessing (i.e. data.json -> binned jpgs in data/)
 '''
 
 import json
-import numpy as np
 import os
 import shutil
 import argparse
+import numpy as np
+import pandas as pd
+from utils import *
 from PIL import Image
 
 class jsonParser:
@@ -34,7 +36,15 @@ class jsonParser:
         self.temp_step = self.settings['tempStep']
 
 class nBin:
-    '''Handles all binning actions including interval creation, data binning, and data alignment.'''
+    '''
+    Handles all binning actions including interval creation, data binning, and data alignment.
+    
+    params:
+        - min_ (int/float): Minimum temperature value. Supports both integer and float.
+        - max_ (int/float): Maximum temperature value. Supports both integer and float.
+        - n_bins (int): Number of bins to split between minimum and maximum.
+        - bin_len (float): Length of each bin.
+    '''
     def __init__(self, min_, max_, n_bins:int, bin_len:float=None) -> None:
         '''
         params:
@@ -59,16 +69,15 @@ class DataProcessor:
     '''
     Handling class to process saved simulations from https://www.statmechsims.com/models/metropolis to
     friendly format.
+
+    params:
+        - json_path (str): Path to JSON of saved simulation.
+        - data_dir (str): Best to be the name of your experiment. Experiment directory where all images will be saved.
+        - n_bins (int): Number of classes for data to be binned in. Default is None.
+        - custom_intervals (np.ndarray): Set custom intervals for inequal boundaries, if desired. MUST be of shape (n_bins, 2) where each row is the
+        upper and lower band of each interval. Default is None.
     '''
     def __init__(self, json_path:str, data_dir:str, n_bins:int=None, custom_intervals:np.ndarray=None) -> None:
-        '''
-        params:
-            - json_path (str): Path to JSON of saved simulation.
-            - data_dir (str): Best to be the name of your experiment. Experiment directory where all images will be saved.
-            - n_bins (int): Number of classes for data to be binned in. Default is None.
-            - custom_intervals (np.ndarray): Set custom intervals for inequal boundaries, if desired. MUST be of shape (n_bins, 2) where each row is the
-            upper and lower band of each interval.
-        '''
         # Do standard initalization:
         self.json_path = json_path
         # Instantiate parser
@@ -117,24 +126,38 @@ class DataProcessor:
         # Otherwise, neither are instantiated. You're gonna need at least one.
         else:
             assert (custom_intervals is not None and n_bins != None), 'Instantiate at least one parameter! Either n_bins or custom_intervals.'
+    
+    def _make_bins(self, data_dir_subdirectory:str):
+        '''
+        Make bin0...bin{n-1} directories.
         
-    def _check_data_dir_exists(self):
+        params:
+            - data_dir_subdirectory (str): Path to subdirectory to create bins within.
         '''
-        Check if data directory exists. If it does, remove the directory tree and create a new one for bins to be inside. If it does not exist,
-        create it and bins.
-        '''
-        # Check if data directory within experiment exists and remove it entirely.
-        data_dir_subdirectory = os.path.join(self.data_dir, 'data')
-        if os.path.isdir(data_dir_subdirectory): 
-            shutil.rmtree(data_dir_subdirectory)
-        os.mkdir(data_dir_subdirectory)
         # Create new bins:
         for bin in range(self.n_bins):
             os.mkdir(os.path.join(data_dir_subdirectory, f'bin{bin}'))
+
+    def _check_data_dir_exists(self, dir_name:str):
+        '''
+        Check if data directory exists. If it does, remove the directory tree and create a new one for bins to be inside. If it does not exist,
+        create it and bins.
+
+        params:
+            - dir_name (str): Name of directory to see if it exists.
+        '''
+        # Check if data directory within experiment exists and remove it entirely.
+        data_dir_subdirectory = os.path.join(self.data_dir, dir_name)
+        if os.path.isdir(data_dir_subdirectory): 
+            shutil.rmtree(data_dir_subdirectory)
+        os.mkdir(data_dir_subdirectory)
     
     def _colormap(self, array_:np.ndarray):
         '''
         Convert array to image data
+        
+        params:
+            - array_ (np.ndarray): 100x100 image array.
         '''
         cmap = {
             1: (255,255,255),
@@ -144,14 +167,32 @@ class DataProcessor:
         img = Image.new('RGB', (100,100), 'white')
         img.putdata(data)
         return img
+    
+    def _save_dataframe(self, image_col:list, labels:list, save_path:str):
+        '''
+        Quick function to save dataframes.
+        
+        params:
+            - image_col (list): Data for image column.
+            - labels (list): Data for labels.
+            - save_path (str): Path to save the dataframe.
+        '''
+        pd.DataFrame({
+            'image': image_col,
+            'label': labels
+        }).to_csv(save_path, index=None)
 
     def process(self):
         '''Process function to be used by end-user.'''
         # Check if data directory exists to empty out. If it does not exist, create it.
-        self._check_data_dir_exists()
+        self._check_data_dir_exists(dir_name='data')
+        # Add bin0 ... bin(n-1):
+        self._make_bins(os.path.join(self.data_dir, 'data'))
         # Iterate through data and match:
         # Will add a new key called bin_number when specified bin is created.
         # After this loop, a csv will be created:
+        save_paths = []
+        labels_ = []
         for data_info in self.parser.data:
             # Parse out temp
             temp = data_info['temp']
@@ -167,6 +208,13 @@ class DataProcessor:
             save_path = os.path.join(self.data_dir, 'data', f'bin{data_info["bin_number"]}', f'{data_info["timestamp"]}.jpg')
             # Save array as JPEG
             img.save(save_path)
+            # Add save paths and bin number to list for dataframe:
+            save_paths.append(save_path)
+            labels_.append(data_info["bin_number"])
+        # Construct/save dataframe
+        self._check_data_dir_exists('csvs')
+        csv_path = os.path.join(self.data_dir, 'csvs', 'data.csv')
+        self._save_dataframe(save_paths, labels_, csv_path)
 
 if __name__ == '__main__':
     # Set up parser.
@@ -176,11 +224,43 @@ if __name__ == '__main__':
     parser.add_argument('--json_path', type=str, help='Path to JSON')
     parser.add_argument('--data_dir', type=str, help='Path to save binned data. Best it is your simulation name.')
     parser.add_argument('--n_bins', type=int, help='Number of bins to bin across start/end temperature.')
+    parser.add_argument('--stratified_shuffle', type=bool, default=True, help='Use stratified shuffling for train/test/validation split. Default is True.')
+    parser.add_argument('--test_size', type=float, default=0.4, help='Ratio of test split (0<=x<=1.) Default is 0.4.')
     args = parser.parse_args()
     # Instantiate processor and run it.
     processor = DataProcessor(
         json_path = args.json_path, 
-        data_dir = args.data_dir, 
+        data_dir = args.data_dir,
         n_bins = args.n_bins
         )
     processor.process()
+    # Use stratified shuffling if true:
+    if args.stratified_shuffle:
+        # Get dataframe
+        df = load_csv(args.data_dir)
+        # Get train test split
+        X_train, y_train, X_test, y_test = stratified_shuffle(args.data_dir, args.n_bins, args.test_size)
+        # Construct train/test paths and save:
+        train_path = os.path.join(args.data_dir, 'csvs', 'train.csv') 
+        test_path = os.path.join(args.data_dir, 'csvs', 'test.csv')
+        validation_path = os.path.join(args.data_dir, 'csvs', 'validation.csv')
+        # Save dataframes
+        processor._save_dataframe(X_train, y_train, train_path)
+        processor._save_dataframe(X_test, y_test, test_path)
+        # Load test set, split in half randomly and save half as test set, other half as validation set.
+        test_df = pd.read_csv(test_path)
+        # Sample half:
+        test = test_df.sample(frac=0.5)
+        test.to_csv(test_path, index=None)
+        # Get other half where test index is not in test_df
+        validation = test_df.loc[~test_df.index.isin(test.index)]
+        validation.to_csv(validation_path, index=None)
+    
+    # Write JSON for experiment information
+    experiments = {
+        'num_labels': args.n_bins,
+        'test_size': args.test_size
+    }
+    experiment_json_path = os.path.join(args.data_dir, 'experiments.json')
+    with open(experiment_json_path, 'w') as j:
+        json.dump(experiments, j)

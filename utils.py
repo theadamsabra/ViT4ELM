@@ -3,59 +3,60 @@ import torch
 import numpy as np
 import pandas as pd
 import os
+from sklearn.model_selection import StratifiedShuffleSplit
 from transformers import ViTForImageClassification, ViTFeatureExtractor, Trainer, TrainingArguments
 from datasets import load_metric, load_dataset, Dataset, DatasetDict, Image
 
 ## DATASET RELATED UTILS
 
 def check_for_dir(data_dir:str, dir_name:str):
+    '''
+    Check if directory within data_dir exists. If it doesn't create it and return the full path.
+    '''
     dir_path = os.path.join(data_dir, dir_name)
     if not os.path.isdir(dir_path):
         os.mkdir(dir_path)
     return dir_path
 
-def load_as_dataset(data_dir:str, test_size:float) -> DatasetDict:
-    '''
-    Quick wrapper to load processed data into HF usable dataset
-    
-    params:
-        - data_dir (str): Directory to data
-        - test_size (float): Size of test set. Will then be split in half for validation.
-    
-    returns:
-        - dataset (DatasetDict): HF Wrapper of Dataset.
-    '''
-    dataset = load_dataset('imagefolder', data_dir = data_dir, split='train')
-    dataset = dataset.train_test_split(test_size)
-    # Now we split the test set in half for validation:
-    test_validation = dataset['test'].train_test_split(0.5)
-    # Thanks hf forums
-    dataset = DatasetDict(
-        {
-            'train': dataset['train'],
-            'test': test_validation['test'],
-            'validation': test_validation['train']
-        }
-    )
-    return dataset
+# The following functions will be used for stratified sampling:
 
-def load_dataset_from_csv(path_to_csv:str) -> Dataset:
+def load_data_csv(data_dir:str) -> pd.DataFrame:
+    return pd.read_csv(os.path.join(data_dir, 'csvs', 'data.csv'))
+
+def stratified_shuffle(data_dir:str, num_labels:int, test_size:float) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    '''
+    Run stratified shuffling method on binned data. Will return the train/test sets.
+    '''
+    # Load csv:
+    df = load_data_csv(data_dir)
+    # Instantiate shuffle split:
+    sss = StratifiedShuffleSplit(num_labels, test_size=test_size)
+    # Get X and y
+    X, y = df['image'].to_numpy(), df['label'].to_numpy()
+    # Stratified split and construct train/test sets
+    for train_index, test_index in sss.split(X, y):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+    # Return the splits:
+    return X_train, y_train, X_test, y_test
+
+
+def load_dataset_from_csv(path_to_csv:str, apply_transform:bool=True) -> Dataset:
     '''
     Helper function to load validation set which has been saved as CSV file during training.
     
     params:
         - path_to_csv (str): Path to validation csv.
+        - apply_transform (bool): Apply default transformation if True. Default set to True.
     
     returns:
         - dataset (Dataset): HuggingFace dataset.
     '''
     df = pd.read_csv(path_to_csv)
-    # Process image column such that "image" column is the path to the jpg.
-    processed_col = [img_col.split('\'path\':')[1].strip('}').strip().strip('\'') for img_col in df['image']]
-    # Replace the column
-    df['image'] = processed_col
     # Load to HF Dataset
     dataset = Dataset.from_pandas(df).cast_column('image', Image())
+    if apply_transform:
+        dataset = dataset.with_transform(transform)
     return dataset
 
 def transform(example_batch):
@@ -99,44 +100,3 @@ def load_pretrained_vit_model(num_labels:int, pretrained_path:str='google/vit-ba
     '''
     model = ViTForImageClassification.from_pretrained(pretrained_path, num_labels = num_labels)
     return model
-
-## EVAL RELATED UTILS 
-
-def quick_load_trainer(model:ViTForImageClassification, output_dir:str) -> Trainer:
-    '''
-    Load a pseudo Trainer class. Although it looks identical to the Trainer class in the trainer.py script, there are some differences as to HOW
-    this Trainer is used. Notice, the Trainer does not have data fed into it. This is because it will be used for EVALUATION.
-
-    params:
-        - model (ViTForImageClassification): Pretrained model either from HuggingFace or from prior training.
-        - output_dir (str): Output directory for saving evaluation.
-    
-    returns:
-        - trainer (Trainer): HF Trainer. Used for both training and evaluation.
-    '''
-    # Set training arguments
-    # These arguments don't really matter. However, loading them all in makes processing everything smooth.
-    # This "Trainer" will be used for prediction on the validation set.
-    training_args = TrainingArguments(
-    output_dir=output_dir,
-    per_device_train_batch_size=16,
-    evaluation_strategy="steps",
-    num_train_epochs=4,
-    save_steps=100,
-    eval_steps=100,
-    logging_steps=10,
-    learning_rate=2e-4,
-    save_total_limit=2,
-    remove_unused_columns=False,
-    push_to_hub=False,
-    report_to='tensorboard',
-    load_best_model_at_end=False
-)
-    # Instantiate trainerViTForImageClassification
-    trainer = Trainer(
-    model=model,
-    args=training_args,
-    data_collator=collate_fn,
-    compute_metrics=compute_metrics
-)
-    return trainer
