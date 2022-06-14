@@ -233,6 +233,7 @@ if __name__ == '__main__':
         data_dir = args.data_dir,
         n_bins = args.n_bins
         )
+
     processor.process()
     # Use stratified shuffling if true:
     if args.stratified_shuffle:
