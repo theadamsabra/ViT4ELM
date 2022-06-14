@@ -8,6 +8,14 @@ Raising issues are encouraged so we know what features to prioritize. We want to
 
 ## Documentation
 
+### Install Requirements
+
+Nothing new here. Just make sure to create a new Python environment and run the following:
+
+```console
+pip install -r requirements.txt
+```
+
 ### Format Data from JSON to User Friendly images
 
 To process the data, ensure you have a `data.json` from [statmechsims](https://www.statmechsims.com/). This json will contain all of your simulation data. Say you have the following directory:
@@ -17,10 +25,10 @@ af_ising/
 └── data.json
 ```
 
-Running the below command will lead to a new directory named `af_ising` with the following structure:
+Running the below command will add to your main experiment directory `af_ising` with the following structure:
 
 ```console
-python3 data_handle.py --json_path="/path/to/data.json" --n_bins=4 --data_dir"af_ising"
+python3 data_handle.py --json_path="af_ising/data.json" --n_bins=4 --data_dir"af_ising" --stratified_shuffle=True --test_size=0.4
 ```
 
 Binning is set by the temperature value, all of equal length between the minimum and maximum temperature.
@@ -35,7 +43,7 @@ from data_handle import DataProcessor
 import numpy as np
 
 # Instantiate necessary parameters.
-json_path = '/path/to/data.json'
+json_path = 'af_ising/data.json'
 data_dir = 'af_ising'
 
 # Please ensure that the shape of custom_intervals is (n_bins, 2)

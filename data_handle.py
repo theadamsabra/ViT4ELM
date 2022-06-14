@@ -237,7 +237,7 @@ if __name__ == '__main__':
     # Use stratified shuffling if true:
     if args.stratified_shuffle:
         # Get dataframe
-        df = load_csv(args.data_dir)
+        df = load_dataset_from_csv(os.path.join(args.data_dir, 'csvs', 'data.csv'))
         # Get train test split
         X_train, y_train, X_test, y_test = stratified_shuffle(args.data_dir, args.n_bins, args.test_size)
         # Construct train/test paths and save:
