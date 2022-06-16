@@ -7,10 +7,8 @@ Used exclusively data preprocessing (i.e. data.json -> binned jpgs in data/)
 import json
 import os
 import shutil
-import argparse
 import numpy as np
 import pandas as pd
-from utils import *
 from PIL import Image
 
 class jsonParser:
@@ -215,53 +213,3 @@ class DataProcessor:
         self._check_data_dir_exists('csvs')
         csv_path = os.path.join(self.data_dir, 'csvs', 'data.csv')
         self._save_dataframe(save_paths, labels_, csv_path)
-
-if __name__ == '__main__':
-    # Set up parser.
-    parser = argparse.ArgumentParser(
-        description='Process data JSON to HF friendly format.'
-        )
-    parser.add_argument('--json_path', type=str, help='Path to JSON')
-    parser.add_argument('--data_dir', type=str, help='Path to save binned data. Best it is your simulation name.')
-    parser.add_argument('--n_bins', type=int, help='Number of bins to bin across start/end temperature.')
-    parser.add_argument('--stratified_shuffle', type=bool, default=True, help='Use stratified shuffling for train/test/validation split. Default is True.')
-    parser.add_argument('--test_size', type=float, default=0.4, help='Ratio of test split (0<=x<=1.) Default is 0.4.')
-    args = parser.parse_args()
-    # Instantiate processor and run it.
-    processor = DataProcessor(
-        json_path = args.json_path, 
-        data_dir = args.data_dir,
-        n_bins = args.n_bins
-        )
-
-    processor.process()
-    # Use stratified shuffling if true:
-    if args.stratified_shuffle:
-        # Get dataframe
-        df = load_dataset_from_csv(os.path.join(args.data_dir, 'csvs', 'data.csv'))
-        # Get train test split
-        X_train, y_train, X_test, y_test = stratified_shuffle(args.data_dir, args.n_bins, args.test_size)
-        # Construct train/test paths and save:
-        train_path = os.path.join(args.data_dir, 'csvs', 'train.csv') 
-        test_path = os.path.join(args.data_dir, 'csvs', 'test.csv')
-        validation_path = os.path.join(args.data_dir, 'csvs', 'validation.csv')
-        # Save dataframes
-        processor._save_dataframe(X_train, y_train, train_path)
-        processor._save_dataframe(X_test, y_test, test_path)
-        # Load test set, split in half randomly and save half as test set, other half as validation set.
-        test_df = pd.read_csv(test_path)
-        # Sample half:
-        test = test_df.sample(frac=0.5)
-        test.to_csv(test_path, index=None)
-        # Get other half where test index is not in test_df
-        validation = test_df.loc[~test_df.index.isin(test.index)]
-        validation.to_csv(validation_path, index=None)
-    
-    # Write JSON for experiment information
-    experiments = {
-        'num_labels': args.n_bins,
-        'test_size': args.test_size
-    }
-    experiment_json_path = os.path.join(args.data_dir, 'experiments.json')
-    with open(experiment_json_path, 'w') as j:
-        json.dump(experiments, j)

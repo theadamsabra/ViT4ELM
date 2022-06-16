@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import os
 from sklearn.model_selection import StratifiedShuffleSplit
-from transformers import ViTForImageClassification, ViTFeatureExtractor, Trainer, TrainingArguments
-from datasets import load_metric, load_dataset, Dataset, DatasetDict, Image
+from transformers import ViTForImageClassification, ViTFeatureExtractor
+from datasets import load_metric, Dataset, Image
 
 ## DATASET RELATED UTILS
 

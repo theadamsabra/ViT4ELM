@@ -4,3 +4,7 @@ datasets/
 notebooks/
 *.ipynb
 .vscode/
+extra_files/
+build/
+dist/
+vit4elm.egg-info/
