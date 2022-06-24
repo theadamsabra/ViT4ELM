@@ -8,3 +8,4 @@ extra_files/
 build/
 dist/
 vit4elm.egg-info/
+af_ising/

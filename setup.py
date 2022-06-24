@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="vit4elm",
-    version="1.0.1",
+    version="1.1.0",
     author="Adam Sabra",
     description="Vision Transformers for Exotic Lattice Models",
     long_description=long_description,
@@ -19,6 +19,7 @@ setuptools.setup(
         'transformers',
         'datasets',
         'torch',
+        'torchvision',
         'pillow',
         'twine'
     ],
