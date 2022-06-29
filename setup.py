@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="vit4elm",
-    version="1.3.0",
+    version="1.3.3",
     author="Adam Sabra",
     description="Vision Transformers for Exotic Lattice Models",
     long_description=long_description,

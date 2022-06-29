@@ -1,7 +1,6 @@
 __pycache__
 datasets/
 .ipynb_checkpoints/
-*.ipynb
 .vscode/
 extra_files/
 build/

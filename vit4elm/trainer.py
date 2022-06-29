@@ -39,11 +39,11 @@ class ClassificationTrainer:
         learning_rate:float,
         batch_size:int,
         num_epochs:int,
-        image_size:tuple = (224,224),
         device:torch.device = torch.device('cpu'),
         display_step_size:int = 10,
         test_step_size:int = 10,
         save_step_size:int=1,
+        num_runs:int=1,
         save_confusion_matrix:bool = True
         ):
         self.device = device
@@ -65,7 +65,7 @@ class ClassificationTrainer:
         self.num_epochs = num_epochs
         self.save_step_size = save_step_size
         self.test_step_size = test_step_size
-        self.image_size = image_size
+        self.num_runs = num_runs
 
         self.display_step_size = display_step_size
         self.save_confusion_matrix = save_confusion_matrix
@@ -130,10 +130,9 @@ class ClassificationTrainer:
         num_correct /= self.test_size
         print(f"Test Error: \n Accuracy: {(100*num_correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
     
-    def train(self, run:int=0):
+    def train(self):
         '''
         Main loop for training and testing.
-            - run (int): training run number. default set to 0
         '''
         model_base_dir = os.path.join(self.train_dataloader.dataset.data_dir, f'{self.model_name}_models')
         # If root directory doesn't exist, create it
@@ -143,32 +142,34 @@ class ClassificationTrainer:
         # Save randomized weights:
         random_weights = os.path.join(model_base_dir, f'{self.model_name}_random_weights.pth')
         torch.save(self.model, random_weights)
-
-        # If run_{run_number} doesn't exist within model_base_dir, create it:
-        model_root_dir = os.path.join(model_base_dir, f'run_{run}')
-
-        if not os.path.isdir(model_root_dir):
-            os.mkdir(model_root_dir)
-        
-        # Now loop through epochs
-        for e in range(self.num_epochs):
-            print(f'Epoch {e+1} \n ---------------------')
+        for run in range(self.num_runs):
+            # Load random weights at beginning of each run:
+            self.model = torch.load(random_weights)
+            self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
+            # If run_{run_number} doesn't exist within model_base_dir, create it:
+            model_root_dir = os.path.join(model_base_dir, f'run_{run}')
+            if not os.path.isdir(model_root_dir):
+                os.mkdir(model_root_dir)
             
-            # Run main training loop:
-            self._train_loop()
-            
-            # Save every save step size:
-            if (e+1) % self.save_step_size == 0:
-                # Create full path:
-                model_path = os.path.join(model_root_dir, f'{self.model_name}_checkpoint_{e+1}_run_{run}.pth')
-                # Save model:
-                torch.save(self.model, model_path)
-            
-            # Run evaluation on display step size:
-            if (e+1) % self.test_step_size == 0:
-                self._test_loop()
-            
-            print(f'Training has been completed on run {run}.')
+            # Now loop through epochs
+            for e in range(self.num_epochs):
+                print(f'Epoch {e+1} \n ---------------------')
+                
+                # Run main training loop:
+                self._train_loop()
+                
+                # Save every save step size:
+                if (e+1) % self.save_step_size == 0:
+                    # Create full path:
+                    model_path = os.path.join(model_root_dir, f'{self.model_name}_checkpoint_{e+1}_run_{run}.pth')
+                    # Save model:
+                    torch.save(self.model, model_path)
+                
+                # Run evaluation on display step size:
+                if (e+1) % self.test_step_size == 0:
+                    self._test_loop()
+                
+                print(f'Training has been completed on run {run}.')
 
     
     @torch.no_grad()
