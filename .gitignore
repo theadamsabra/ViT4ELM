@@ -1,7 +1,6 @@
 __pycache__
 datasets/
 .ipynb_checkpoints/
-notebooks/
 *.ipynb
 .vscode/
 extra_files/

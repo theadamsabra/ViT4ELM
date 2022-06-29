@@ -3,6 +3,7 @@ import torch.nn as nn
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from vit4elm.datasets import IsingData
 from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
@@ -15,15 +16,15 @@ class ClassificationTrainer:
     - model (nn.Module): pytorch model architecture to be trained. must be a classification
     model.
     - model_name (str): name of model. will be used in naming the checkpoint.
-    - train_dataloader (DataLoader): dataloader containing the training set.
-    - test_dataloader (DataLoader): dataloader containing the test set.
+    - train_set (IsingData): train set of processed data
+    - test_set (IsingData): test sset of processed data
     - loss_function (torch loss): loss function for training
     - optimizer (Optimizer): torch.optim Optimizer to use for optimization.
     - learning_rate (float): learning rate for training
     - batch_size (int): batch size of data.
     - num_epochs (int): number of epochs to train.
     - device (torch.device): set device for training. default set to torch.default("cpu").
-    - display_step_size (int): how many batches to train on.
+    - display_step_size (int): show loss every batch_num % display_step_size 
     - evaluate (bool): if true, evaluate on validation set.
     - save_confusion_matrix (bool): if true, save confusion matrix.
     '''
@@ -31,36 +32,42 @@ class ClassificationTrainer:
         self, 
         model:nn.Module,
         model_name:str,
-        train_dataloader:DataLoader,
-        test_dataloader: DataLoader,
+        train_set:IsingData,
+        test_set:IsingData,
         loss_function:nn.Module,
         optimizer:Optimizer,
         learning_rate:float,
         batch_size:int,
         num_epochs:int,
+        image_size:tuple = (224,224),
         device:torch.device = torch.device('cpu'),
-        display_step_size:int = 100,
-        evaluate:bool = True,
+        display_step_size:int = 10,
+        test_step_size:int = 10,
+        save_step_size:int=1,
         save_confusion_matrix:bool = True
         ):
         self.device = device
         self.model = model.to(self.device)
         self.model_name = model_name
-        self.train_dataloader = train_dataloader
-        self.test_dataloader = test_dataloader
+        self.batch_size = batch_size
+        self.train_set = train_set
+        self.test_set = test_set
+        self.train_dataloader = DataLoader(self.train_set, self.batch_size)
+        self.test_dataloader = DataLoader(self.test_set, self.batch_size)
         
         self.test_size = len(self.test_dataloader.dataset)
         self.train_size = len(self.train_dataloader.dataset)
         self.num_batches = len(self.test_dataloader)
         
-        self.loss_function = loss_function
+        self.loss_function = loss_function.to(self.device)
         self.optimizer = optimizer
         self.learning_rate = learning_rate
-        self.batch_size = batch_size
         self.num_epochs = num_epochs
+        self.save_step_size = save_step_size
+        self.test_step_size = test_step_size
+        self.image_size = image_size
 
         self.display_step_size = display_step_size
-        self.evaluate = evaluate
         self.save_confusion_matrix = save_confusion_matrix
     
     def _get_prediction(self, X:torch.Tensor) -> torch.Tensor:
@@ -80,7 +87,7 @@ class ClassificationTrainer:
         prediction = prediction.to(self.device)
         
         return prediction
-
+    
     def _train_loop(self):
         '''
         Main train loop called by `self.train()`
@@ -98,8 +105,8 @@ class ClassificationTrainer:
 
             # Show progress every display_step_size
             if batch_num % self.display_step_size == 0:
-                loss, current = loss.item(), batch_num * len(X)
-                print(f"Loss: {loss:>7f}  [{current:>5d}/{self.train_size:>5d}]")
+                loss_, current = loss.item(), batch_num * len(X)
+                print(f"Loss: {loss_:>7f}  [{current:>5d}/{self.train_size:>5d}]")
     
     @torch.no_grad()
     def _test_loop(self):
@@ -123,39 +130,67 @@ class ClassificationTrainer:
         num_correct /= self.test_size
         print(f"Test Error: \n Accuracy: {(100*num_correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
     
-    def train(self):
-        # Main loop for training and testing:
-        for e in range(self.num_epochs):
-            print(f'Epoch {e} \n ---------------------')
-            self._train_loop()
-            self._test_loop()
-        print('Training has been completed.')
-        # Save model:
-        model_root_dir = os.path.join(self.train_dataloader.dataset.data_dir, 'models')
+    def train(self, run:int=0):
+        '''
+        Main loop for training and testing.
+            - run (int): training run number. default set to 0
+        '''
+        model_base_dir = os.path.join(self.train_dataloader.dataset.data_dir, f'{self.model_name}_models')
         # If root directory doesn't exist, create it
+        if not os.path.isdir(model_base_dir):
+            os.mkdir(model_base_dir)
+        
+        # Save randomized weights:
+        random_weights = os.path.join(model_base_dir, f'{self.model_name}_random_weights.pth')
+        torch.save(self.model.state_dict(), random_weights)
+
+        # If run_{run_number} doesn't exist within model_base_dir, create it:
+        model_root_dir = os.path.join(model_base_dir, f'run_{run}')
+
         if not os.path.isdir(model_root_dir):
             os.mkdir(model_root_dir)
-        # Create full path:
-        model_path = os.path.join(model_root_dir, f'{self.model_name}_checkpoint_{e}.pth')
-        # Save model:
-        torch.save(self.model.state_dict(), model_path)
+        
+        # Now loop through epochs
+        for e in range(self.num_epochs):
+            print(f'Epoch {e+1} \n ---------------------')
+            
+            # Run main training loop:
+            self._train_loop()
+            
+            # Save every save step size:
+            if (e+1) % self.save_step_size == 0:
+                # Create full path:
+                model_path = os.path.join(model_root_dir, f'{self.model_name}_checkpoint_{e+1}_run_{run}.pth')
+                # Save model:
+                torch.save(self.model.state_dict(), model_path)
+            
+            # Run evaluation on display step size:
+            if (e+1) % self.test_step_size == 0:
+                self._test_loop()
+            
+            print(f'Training has been completed on run {run}.')
+
     
     @torch.no_grad()
-    def evaluate(self, validation_dataloader:DataLoader):
+    def evaluate(self, model_path:str, validation_set:IsingData):
         '''
         Run evaluation on validation set and return results.
 
         params:
-            - validation_dataloader (Dataloader):
-            - save_confusion_matrix (bool):
+            - best_model_path (str): path to model in question.
+            - validation_set (IsingData): validation set.
         '''
         all_gt = []
         all_predictions = []
+        model = torch.load(model_path)
+
+        validation_dataloader = DataLoader(validation_set)
+
         for X, y in validation_dataloader:
             # Set to device:
             X, y = X.to(self.device), y.to(self.device)
             # Get prediction probabilites:
-            predictions = self.model(X)
+            predictions = model(X)
             # Get labels:
             predictions_labels = predictions.argmax(1)
             # Save all values:
