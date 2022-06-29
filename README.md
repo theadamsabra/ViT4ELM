@@ -20,7 +20,7 @@ pip install vit4elm
 
 ### Notebooks:
 
-For full-fledged documentation on the various classes that have been created within this repository, there are notebooks to view for your discretion.
+For full-fledged documentation on the various classes that have been created within this repository, there are [notebooks to view for your discretion.](notebooks/)
 
 
 ## To Do
