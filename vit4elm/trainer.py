@@ -142,7 +142,7 @@ class ClassificationTrainer:
         
         # Save randomized weights:
         random_weights = os.path.join(model_base_dir, f'{self.model_name}_random_weights.pth')
-        torch.save(self.model.state_dict(), random_weights)
+        torch.save(self.model, random_weights)
 
         # If run_{run_number} doesn't exist within model_base_dir, create it:
         model_root_dir = os.path.join(model_base_dir, f'run_{run}')
@@ -162,7 +162,7 @@ class ClassificationTrainer:
                 # Create full path:
                 model_path = os.path.join(model_root_dir, f'{self.model_name}_checkpoint_{e+1}_run_{run}.pth')
                 # Save model:
-                torch.save(self.model.state_dict(), model_path)
+                torch.save(self.model, model_path)
             
             # Run evaluation on display step size:
             if (e+1) % self.test_step_size == 0:
@@ -177,7 +177,8 @@ class ClassificationTrainer:
         Run evaluation on validation set and return results.
 
         params:
-            - best_model_path (str): path to model in question.
+            - architecture (nn.Module): module of architecture. it will inheret the state_dict of the model_path.
+            - model_path (str): path to model in question.
             - validation_set (IsingData): validation set.
         '''
         all_gt = []
@@ -190,12 +191,13 @@ class ClassificationTrainer:
             # Set to device:
             X, y = X.to(self.device), y.to(self.device)
             # Get prediction probabilites:
+            X = torch.squeeze(X, dim=0)
             predictions = model(X)
             # Get labels:
             predictions_labels = predictions.argmax(1)
             # Save all values:
             all_gt.append(y.tolist())
-            all_predictions(predictions_labels.tolist())
+            all_predictions.append(predictions_labels.tolist())
         
         # Flatten:
         all_gt = np.array(all_gt).flatten()
