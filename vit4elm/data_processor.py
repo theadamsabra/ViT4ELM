@@ -89,7 +89,7 @@ class DataProcessor:
         self.stratified_shuffle = stratified_shuffle
         self.test_size = test_size
         # Instantiate parser
-        self.parser = jsonParser(self.json_path) 
+        self.parser = jsonParser(self.json_path)
         
         # Add n_bins and data_dir
         self.n_bins = n_bins
@@ -137,6 +137,9 @@ class DataProcessor:
         # Otherwise, neither are instantiated. You're gonna need at least one.
         else:
             assert (custom_intervals is not None and n_bins != None), 'Instantiate at least one parameter! Either n_bins or custom_intervals.'
+        
+        assert self.parser.temp_min == self.binner.intervals[0,0], f'The minimum temperature of your simulation, {self.parser.temp_min} does not align with the minimum temperature of your intervals, {self.binner.intervals[0,0]}.'
+        assert self.parser.temp_max == self.binner.intervals[-1,-1], f'The maximum temperature of your simulation, {self.parser.temp_max} does not align with the maximum temperature of your intervals, {self.binner.intervals[-1,-1]} .'
     
     def _make_bins(self, data_dir_subdirectory:str):
         '''
